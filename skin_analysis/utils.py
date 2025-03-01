@@ -68,32 +68,35 @@ def analyze_image(image_path):
         skin_condition = analyze_skin(face_region)
         skin_details['skin_type'] = skin_condition
         print(f"🔍 Detected Skin Condition: {skin_condition}")
+         # Common beneficial ingredients across all types
+        common_ingredients = "Aloe Vera, Green Tea Extract, Niacinamide, Vitamin E"
+         # # Common harmful ingredients
+        common_avoid = "Alcohol-based products, Fragrance, Harsh exfoliants, Comedogenic oils"
         if skin_condition =='Dry':
             dry_percentage = dry_file.predict_dry_skin(image_path)
             skin_details['percentage'] = f'{dry_percentage}%'
-            skin_details['acne_types'] = False
-            skin_details['ingredients'] = "Hyaluronic Acid, Glycerin, Ceramides, Squalane, Aloe Vera"
-            skin_details['avoid'] = "Alcohol-based toners, Harsh exfoliants"
+            skin_details['ingredients'] = f"{common_ingredients}, Hyaluronic Acid, Glycerin, Squalane, Ceramides"
+            skin_details['avoid'] = common_avoid
             print('dry_percentage------->',dry_percentage)
         elif skin_condition =='Oily':
             oily_percentages = oil_file.calculate_oiliness(image_path)
             skin_details['percentage'] = f'{oily_percentages}%'
-            skin_details['acne_types'] = False
-            skin_details['ingredients'] = "Salicylic Acid, Zinc, Niacinamide, Green Tea"
-            skin_details['avoid'] = "Thick creams, Comedogenic oils"
+            skin_details['ingredients'] = f"{common_ingredients}, Salicylic Acid, Zinc, Tea Tree Oil"
+            skin_details['avoid'] = common_avoid
             print("oily_percentages------->",oily_percentages)
         else:
             acne_type, confidence = acne_file.predict_acne_type(image_path)
             skin_details['acne_types'] = acne_type
-            skin_details['percentage'] = False
-            if(acne_type in ["Whiteheads", "Blackheads"]):
-                skin_details['ingredients'] = "Salicylic Acid (BHA), Niacinamide, Clay Masks"
-            elif(acne_type == "Papule"):
-                skin_details['ingredients'] = "Benzoyl Peroxide, Tea Tree Oil, Retinol"
-            elif(acne_type == "Pustule"):
-                skin_details['ingredients'] = "Benzoyl Peroxide, Sulfur, Centella Asiatica"
+            if acne_type in ["Whiteheads", "Blackheads"]:
+                skin_details['ingredients'] = f"{common_ingredients}, Salicylic Acid (BHA), Clay Masks"
+            elif acne_type == "Papule":
+                skin_details['ingredients'] = f"{common_ingredients}, Benzoyl Peroxide, Tea Tree Oil, Retinol"
+            elif acne_type == "Pustule":
+                skin_details['ingredients'] = f"{common_ingredients}, Benzoyl Peroxide, Sulfur, Centella Asiatica"
             else:
-                skin_details['ingredients'] = "Salicylic acid, benzoyl peroxide, and azelaic acid"
+                skin_details['ingredients'] = f"{common_ingredients}, Salicylic Acid, Benzoyl Peroxide, Azelaic Acid"
+
+            skin_details['avoid'] = common_avoid
             print("predicted_class_label------>",acne_type)
             print("confidence-------->",confidence)
     else:
