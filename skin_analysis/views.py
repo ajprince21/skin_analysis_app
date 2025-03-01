@@ -1,36 +1,52 @@
-from rest_framework import viewsets
+from rest_framework.views import APIView
 from rest_framework.response import Response
-from rest_framework.parsers import MultiPartParser
+from django.core.files.storage import default_storage
+from rest_framework import status
 from .models import SkinAnalysis
-from .serializers import SkinAnalysisSerializer
-import tensorflow as tf  # or your chosen ML library
+from .utils import analyze_image 
+import cv2
+import numpy as np
+import logging
+import tempfile
 
-class SkinAnalysisViewSet(viewsets.ModelViewSet):
-    queryset = SkinAnalysis.objects.all()
-    serializer_class = SkinAnalysisSerializer
-    parser_classes = (MultiPartParser,)
+logger = logging.getLogger(__name__)
+class ImageUploadView(APIView):
+    def post(self, request):
+        if 'image' not in request.FILES:
+            return Response({"error": "No image file provided."}, status=status.HTTP_400_BAD_REQUEST)
 
-    def create(self, request, *args, **kwargs):
-        # Process image(s) here
-        serializer = self.get_serializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        skin_analysis = serializer.save()
-
-        # Instead of ML prediction, you should add your actual prediction code here.
-        # You may want to call a separate function that includes your ML logic.
-        # For now, we'll simulate predicted data.
-        skin_analysis.acne_score = 2.5  # Placeholder values
-        skin_analysis.eye_area_condition = 3.0
-        skin_analysis.uniformness_score = 4.0
-        skin_analysis.redness_score = 1.5
-        skin_analysis.pores_score = 3.0
-        skin_analysis.lines_score = 2.0
-        skin_analysis.hydration_score = 4.5
-        skin_analysis.pigmentation_score = 2.0
-        skin_analysis.chronological_age = 25
-        skin_analysis.perceived_age = 27
-        skin_analysis.skin_tone = "light"
+        file = request.FILES['image']
         
-        skin_analysis.save()
+        # Validate file type
+        if not file.name.endswith(('.png', '.jpg', '.jpeg')):
+            return Response({"error": "File type not supported, please upload an image."}, status=status.HTTP_400_BAD_REQUEST)
 
-        return Response(serializer.data)
+        # Use a NamedTemporaryFile for processing
+        with tempfile.NamedTemporaryFile(delete=True) as temp_file:
+            for chunk in file.chunks():  # Handle large files
+                temp_file.write(chunk)
+            temp_file.flush()  # Ensure the file is written
+            temp_file.seek(0)  # Go back to the beginning of the file
+
+            logger.info(f'File saved at: {temp_file.name}')
+            analysis_results = analyze_image(temp_file.name)
+
+        
+        if analysis_results is None: 
+            return Response({"error": "Image processing failed."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+        # Save the analysis results to the database
+        skin_analysis_instance = SkinAnalysis(
+            image=file,
+            skin_tone=analysis_results.get('skin_tone', ''),
+            skin_type=analysis_results.get('skin_type', ''),
+            percentage=analysis_results.get('percentage', ''),
+            acne_types=analysis_results.get('acne_types', ''),
+            redness_score=analysis_results.get('redness_score', ''),
+            pores_score=analysis_results.get('pores_score', ''),
+            pigmentation_score=analysis_results.get('pigmentation_score', '')
+        )
+        skin_analysis_instance.save()
+
+        # Return the analysis results as a response
+        return Response(analysis_results, status=status.HTTP_201_CREATED)

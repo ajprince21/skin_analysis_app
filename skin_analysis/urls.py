@@ -1,10 +1,6 @@
-from django.urls import path, include
-from rest_framework.routers import DefaultRouter
-from .views import SkinAnalysisViewSet
-
-router = DefaultRouter()
-router.register(r'skin_analysis', SkinAnalysisViewSet)
+from django.urls import path
+from .views import ImageUploadView
 
 urlpatterns = [
-    path('', include(router.urls)),
+    path('skin-analysis/', ImageUploadView.as_view(), name='image-upload'),
 ]
